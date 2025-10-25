@@ -7,6 +7,8 @@
 // @match        https://anigo.to/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=anigo.to
 // @grant        window.onurlchange
+// @updateURL    https://github.com/Saadiq8149/anilist-anigo-sync/blob/master/tampermonkey.js
+// @downloadURL  https://github.com/Saadiq8149/anilist-anigo-sync/blob/master/tampermonkey.js
 // ==/UserScript==
 
 const HOME_URL = "https://anigo.to/home";
