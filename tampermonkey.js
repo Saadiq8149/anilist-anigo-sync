@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AniGo sync to Anilist
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  try to take over the world!
 // @author       Saadiq
 // @match        https://anigo.to/*
@@ -16,24 +16,29 @@ const WATCH_URL = "https://anigo.to/watch";
 const ANILIST_CLIENT_ID = "31572";
 
 async function performAnilistQuery(query, variables, accessToken) {
-  return fetch("https://graphql.anilist.co", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      query: query,
-      variables: variables,
-    }),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      return data;
-    })
-    .catch((error) => {
-      console.error("Error performing Anilist query:", error);
+  try {
+    const response = await fetch("https://graphql.anilist.co", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        query: query,
+        variables: variables,
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error performing Anilist query:", error);
+    throw error;
+  }
 }
 
 async function updateAnilist(tabUrl) {
@@ -57,6 +62,9 @@ async function updateAnilist(tabUrl) {
         media(search: $search, type: ANIME) {
           id
           episodes
+          nextAiringEpisode {
+            episode
+          }
         }
       }
     }
@@ -94,7 +102,10 @@ async function updateAnilist(tabUrl) {
     {
       mediaId: mediaId,
       progress: parseInt(episodeNumber),
-      status: episodeNumber >= media.episodes ? "COMPLETED" : "CURRENT",
+      status:
+        episodeNumber >= (media.episodes || media.nextAiringEpisode.episode - 1)
+          ? "COMPLETED"
+          : "CURRENT",
     },
     accessToken,
   );
