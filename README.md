@@ -19,7 +19,7 @@ If you finish the final episode, the anime is marked as "Completed" on AniList.
 
 1. Install [Tampermonkey](https://tampermonkey.net/) for your browser.
 2. Open the Tampermonkey dashboard and click **Create a new script**.
-3. Delete the default code and paste the contents of `anilist-anigo-sync.user.js`.
+3. Delete the default code and paste the contents of `tampermonkey.js`.
 4. Save the script.
 5. Go to [https://anigo.to/home](https://anigo.to/home) in your browser.
 6. The script will redirect you to AniList for authorization.
