@@ -1,0 +1,135 @@
+// ==UserScript==
+// @name         AniGo sync to Anilist
+// @namespace    http://tampermonkey.net/
+// @version      2025-10-25
+// @description  try to take over the world!
+// @author       Saadiq
+// @match        https://anigo.to/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=anigo.to
+// @grant        window.onurlchange
+// ==/UserScript==
+
+const HOME_URL = "https://anigo.to/home";
+const WATCH_URL = "https://anigo.to/watch";
+const ANILIST_CLIENT_ID = "31572";
+
+async function performAnilistQuery(query, variables, accessToken) {
+  return fetch("https://graphql.anilist.co", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      query: query,
+      variables: variables,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      console.error("Error performing Anilist query:", error);
+    });
+}
+
+async function updateAnilist(tabUrl) {
+  let accessToken = localStorage.getItem("anilistTampermonkeyAnigoAccessToken");
+
+  if (!accessToken) {
+    return;
+  }
+
+  let episodeNumber = tabUrl.split("#ep=")[1];
+  let animeSlug = tabUrl.split("watch/")[1].split("-").slice(0, -1).join("-");
+
+  let animeTitle = animeSlug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+  let searchQuery = `
+    query ($search: String!) {
+      Page {
+        media(search: $search, type: ANIME) {
+          id
+          episodes
+        }
+      }
+    }
+  `;
+
+  const data = await performAnilistQuery(
+    searchQuery,
+    { search: animeTitle },
+    accessToken,
+  );
+
+  if (data.errors) {
+    return;
+  }
+
+  let media = data.data.Page.media[0];
+  if (!media) {
+    return;
+  }
+
+  let mediaId = media.id;
+
+  let updateMutation = `
+    mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus) {
+      SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+        id
+        progress
+        status
+      }
+    }
+  `;
+
+  const updateData = await performAnilistQuery(
+    updateMutation,
+    {
+      mediaId: mediaId,
+      progress: parseInt(episodeNumber),
+      status: episodeNumber >= media.episodes ? "COMPLETED" : "CURRENT",
+    },
+    accessToken,
+  );
+
+  if (updateData.errors) {
+    return;
+  }
+}
+
+(function () {
+  "use strict";
+  let tabUrl = window.location;
+
+  if (window.onurlchange === null) {
+    window.addEventListener("urlchange", function (event) {
+      const newUrl = window.location.href;
+      if (newUrl.startsWith(WATCH_URL)) {
+        updateAnilist(newUrl);
+      }
+    });
+  }
+
+  if (tabUrl.startsWith(HOME_URL)) {
+    // on home page
+    if (tabUrl == HOME_URL) {
+      let accessToken = localStorage.getItem(
+        "anilistTampermonkeyAnigoAccessToken",
+      );
+      if (!accessToken) {
+        let anilistAuthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
+        window.location.href = anilistAuthUrl;
+      }
+    } else {
+      // has access token
+      let accessToken = tabUrl.href.split("#access_token=")[1].split("&")[0];
+      localStorage.setItem("anilistTampermonkeyAnigoAccessToken", accessToken);
+      window.location.href = HOME_URL;
+    }
+  }
+})();
