@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AniGo sync to Anilist
 // @namespace    http://tampermonkey.net/
-// @version      2025-10-25
+// @version      1.0
 // @description  try to take over the world!
 // @author       Saadiq
 // @match        https://anigo.to/*
