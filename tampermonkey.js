@@ -62,9 +62,7 @@ async function updateAnilist(tabUrl) {
         media(search: $search, type: ANIME) {
           id
           episodes
-          nextAiringEpisode {
-            episode
-          }
+          status
         }
       }
     }
@@ -97,15 +95,20 @@ async function updateAnilist(tabUrl) {
     }
   `;
 
+  var updatedStatus = "CURRENT";
+
+  if (media.status == "FINISHED" || media.status == "CANCELLED") {
+    if (episodeNumber >= media.episodes) {
+      updatedStatus = "COMPLETED";
+    }
+  }
+
   const updateData = await performAnilistQuery(
     updateMutation,
     {
       mediaId: mediaId,
       progress: parseInt(episodeNumber),
-      status:
-        episodeNumber >= (media.episodes || media.nextAiringEpisode.episode - 1)
-          ? "COMPLETED"
-          : "CURRENT",
+      status: updatedStatus,
     },
     accessToken,
   );
